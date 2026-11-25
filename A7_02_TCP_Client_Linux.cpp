@@ -11,7 +11,7 @@
 
 using namespace std;
 
-// Sends the complete string, even if send() transmits only part of it.
+// Send the full string, including when send() writes only part of it.
 bool sendAll(int sock, const string& data) {
     size_t totalSent = 0;
 
@@ -27,7 +27,7 @@ bool sendAll(int sock, const string& data) {
     return true;
 }
 
-// Reads one newline-terminated message from the TCP connection.
+// Read one newline-terminated message.
 bool receiveLine(int sock, string& data) {
     data.clear();
     char ch;
@@ -45,7 +45,6 @@ bool receiveLine(int sock, string& data) {
 }
 
 int main() {
-    // Create a TCP socket.
     int clientSocket = socket(AF_INET, SOCK_STREAM, 0);
     if (clientSocket < 0) {
         perror("socket");
@@ -53,30 +52,26 @@ int main() {
     }
 
     sockaddr_in serverAddr{};
-    serverAddr.sin_family = AF_INET;                 // IPv4.
-    serverAddr.sin_port = htons(8080);               // Server's TCP port.
-    serverAddr.sin_addr.s_addr = inet_addr("127.0.0.1"); // Same computer.
+    serverAddr.sin_family = AF_INET;
+    serverAddr.sin_port = htons(8080);
+    serverAddr.sin_addr.s_addr = inet_addr("127.0.0.1");
 
-    // Connect to the TCP server.
     if (connect(clientSocket, (sockaddr*)&serverAddr, sizeof(serverAddr)) < 0) {
         perror("connect");
         close(clientSocket);
         return 1;
     }
 
-    // Read the message to send to the server.
     string message;
     cout << "Enter data to send to server: ";
     getline(cin, message);
 
-    // Newline marks the end of the message for this simple TCP example.
     if (!sendAll(clientSocket, message + "\n")) {
         perror("send");
         close(clientSocket);
         return 1;
     }
 
-    // Receive and display the server's processed result.
     string reply;
     if (receiveLine(clientSocket, reply)) {
         cout << "Processed reply from server: " << reply << endl;
@@ -84,6 +79,6 @@ int main() {
         cout << "Could not receive a reply from the server." << endl;
     }
 
-    close(clientSocket); // Close the TCP connection.
+    close(clientSocket);
     return 0;
 }
