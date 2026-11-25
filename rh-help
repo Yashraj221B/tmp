@@ -1,0 +1,46 @@
+
+#!/usr/bin/env bash
+
+set -euo pipefail
+
+# Gemini configuration
+API_KEY="AIzaSyDnYOJPX6aZgYnZ_X_A8MaMg-JFurE5LpA"
+MODEL="gemini-3.5-flash-lite"
+
+API_URL="https://generativelanguage.googleapis.com/v1beta/models/${MODEL}:generateContent"
+
+if [[ $# -eq 0 ]]; then
+    echo 'Usage: rh-help "your question"'
+    exit 1
+fi
+
+PROMPT="$*"
+
+RESPONSE=$(mktemp)
+trap 'rm -f "$RESPONSE"' EXIT
+
+HTTP_CODE=$(curl -sS \
+    -o "$RESPONSE" \
+    -w "%{http_code}" \
+    -X POST "$API_URL" \
+    -H "Content-Type: application/json" \
+    -H "x-goog-api-key: $API_KEY" \
+    -d "$(jq -n --arg prompt "$PROMPT" '{
+        contents: [{
+            parts: [{text: $prompt}]
+        }]
+    }')") || {
+        echo "Connection failed."
+        exit 1
+    }
+
+if [[ "$HTTP_CODE" != "200" ]]; then
+    echo "Gemini API Error ($HTTP_CODE):"
+    jq -r '.error.message // .' "$RESPONSE"
+    exit 1
+fi
+
+jq -r '
+    [.candidates[0].content.parts[]?.text // empty]
+    | join("\n")
+' "$RESPONSE"
